@@ -1,0 +1,153 @@
+@model JournalViewModel
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <title>Суммативные оценки - Emaktab.uz</title>
+    <link rel="stylesheet" href="https://static.kundelik.kz/styles/main/common.css" type="text/css" />
+    <link rel="stylesheet" href="https://static.kundelik.kz/blocks/blocks.css" type="text/css" />
+    <style>
+        html,body { background:#fff !important; }
+        .criteria-journal-period-table__lesson-mark-value_good { color: #24a148; font-weight: bold; }
+        .criteria-journal-period-table__lesson-mark-value_bad { color: #ff5252; font-weight: bold; }
+        .criteria-journal-period-table__lesson-mark-value_average { color: #ff9800; font-weight: bold;}
+        .criteria-journal-period-table__lesson-mark-value_ { color: #333;}
+        .criteria-journal-period-table__final-mark_green { color: #24a148; font-weight:bold;}
+        .criteria-journal-period-table__body__cell input { width:32px;height:28px;text-align:center;font-size:15px;border:1px solid #bbb; }
+        .criteria-journal-period-table__body__cell.editing { background:#f6f7fa !important; }
+        .criteria-journal-period-table__body__cell { cursor:pointer; background:#fff; min-width:36px; }
+        .criteria-journal-period-table__body__cell_total-mark { background: #edfbe7; font-weight:bold; }
+        tr:hover > .criteria-journal-period-table__body__cell { background:#f1f4f8;}
+    </style>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body class="page-body">
+<div class="criteria-journal-period-table">
+    <div class="scrollable-table">
+        <div class="scrollable-table__column scrollable-table__column_left">
+            <div class="scrollable-table__cell scrollable-table__cell_corner"></div>
+            <div class="scrollable-table__cell scrollable-table__cell_leftColumn">
+                <table class="criteria-journal-period-table__table criteria-journal-period-table__students">
+                    <tbody>
+                        @for (int i = 0; i < Model.Students.Count; i++)
+                        {
+                            <tr class="criteria-journal-period-table__students__row">
+                                <td class="criteria-journal-period-table__students__cell criteria-journal-period-table__students__cell_number">@(i+1)</td>
+                                <td class="criteria-journal-period-table__students__cell criteria-journal-period-table__students__cell_name">
+                                    <a class="link link_blue-with-orange-hover" href="#">@Model.Students[i].FullName</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="scrollable-table__column scrollable-table__column_right">
+            <div class="scrollable-table__cell scrollable-table__cell_head">
+                <table class="criteria-journal-period-table__table criteria-journal-period-table__head">
+                    <tr class="criteria-journal-period-table__head__row">
+                        <th class="criteria-journal-period-table__head__cell" colspan="@Model.Lessons.Count">4 четверть</th>
+                        <th class="criteria-journal-period-table__head__cell" rowspan="4">4 четверть</th>
+                    </tr>
+                    <tr class="criteria-journal-period-table__head__row">
+                        @{
+                            var months = Model.Lessons.GroupBy(l => l.Month).ToList();
+                            foreach(var month in months)
+                            {
+                                <th class="criteria-journal-period-table__head__cell" colspan="@month.Count()">@month.Key</th>
+                            }
+                        }
+                    </tr>
+                    <tr class="criteria-journal-period-table__head__row">
+                        @foreach (var lesson in Model.Lessons)
+                        {
+                            <th class="criteria-journal-period-table__head__cell">
+                                @lesson.Date.ToString("dd")<br />Мальчики</th>
+                        }
+                    </tr>
+                    <tr class="criteria-journal-period-table__head__row">
+                        @foreach (var lesson in Model.Lessons)
+                        {
+                            <th class="criteria-journal-period-table__head__cell">ФО</th>
+                        }
+                    </tr>
+                </table>
+            </div>
+            <div class="scrollable-table__cell scrollable-table__cell_body">
+                <table class="criteria-journal-period-table__table criteria-journal-period-table__body">
+                    <tbody>
+                    @for (int i = 0; i < Model.Students.Count; i++)
+                    {
+                        <tr class="criteria-journal-period-table__body__row">
+                        @for (int j = 0; j < Model.Lessons.Count; j++)
+                        {
+                            var student = Model.Students[i];
+                            var lesson = Model.Lessons[j];
+                            var mark = Model.Marks.FirstOrDefault(m => m.StudentId == student.Id && m.LessonId == lesson.Id)?.Value ?? "";
+                            string markClass = "criteria-journal-period-table__lesson-mark-value_";
+                            if (mark == "10") markClass = "criteria-journal-period-table__lesson-mark-value_good";
+                            else if (mark == "8" || mark == "7") markClass = "criteria-journal-period-table__lesson-mark-value_average";
+                            else if (mark == "2") markClass = "criteria-journal-period-table__lesson-mark-value_bad";
+                        <td
+                            class="criteria-journal-period-table__body__cell @markClass"
+                            data-student="@student.Id"
+                            data-lesson="@lesson.Id"
+                            tabindex="0">
+                            <span class="mark-text">@mark</span>
+                        </td>
+                        }
+                        <td class="criteria-journal-period-table__body__cell criteria-journal-period-table__body__cell_total-mark">
+                            <div class="criteria-journal-period-table__final-mark">
+                                <span class="criteria-journal-period-table__final-mark_green">ЗЧ</span>
+                            </div>
+                        </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+$(function(){
+    let tdSelector = '.criteria-journal-period-table__body__cell:not(.criteria-journal-period-table__body__cell_total-mark)';
+    let inputActive = false;
+    $(document).on('click keydown', tdSelector, function(e){
+        let td = $(this);
+        if (inputActive && !td.find('input').length) return;
+        if ((e.type==="click" || e.keyCode===13) && !td.find('input').length) {
+            let oldVal = td.find('.mark-text').text();
+            let inp = $('<input type="text" maxlength="2" />').val(oldVal).addClass('mark-editing').css('width','32px');
+            td.addClass('editing').empty().append(inp);
+            inp.focus().select();
+            inputActive = true;
+            inp.on('keydown blur', function(ke){
+                if(ke.type==='keydown' && ke.key!=='Enter' && ke.key!=='Escape') return;
+                if(ke.key==='Escape') {
+                    td.removeClass('editing').empty().append($('<span class="mark-text"/>').text(oldVal));
+                    inputActive=false;
+                    return;
+                }
+                let newVal = inp.val().replace(/\D/g,'').slice(0,2);
+                // поддержка удаления: если пусто — удаляем
+                $.post('/Journal/SetMark', {
+                    studentId: td.data('student'),
+                    lessonId: td.data('lesson'),
+                    value: newVal
+                }, function(){
+                    let markClass="criteria-journal-period-table__lesson-mark-value_";
+                    if (newVal==="10") markClass="criteria-journal-period-table__lesson-mark-value_good";
+                    else if (newVal==="8" || newVal==="7") markClass="criteria-journal-period-table__lesson-mark-value_average";
+                    else if (newVal==="2") markClass="criteria-journal-period-table__lesson-mark-value_bad";
+                    td.removeClass().addClass('criteria-journal-period-table__body__cell '+markClass);
+                    td.empty().append($('<span class="mark-text"/>').text(newVal));
+                    inputActive=false;
+                });
+            });
+        }
+    });
+});
+</script>
+</body>
+</html>
